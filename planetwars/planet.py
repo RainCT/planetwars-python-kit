@@ -16,14 +16,15 @@ class Planet(object):
         self.growth_rate = int(growth_rate)
 
     def __repr__(self):
-        return "<P(%d)@%s #%d +%d>" % (self.id, self.position, self.ship_count, self.growth_rate)
+        return "<P(%d) #%d +%d>" % (self.id, self.ship_count, self.growth_rate)
 
     def update(self, owner, ship_count):
         self.owner = PLAYER_MAP.get(int(owner))
         self.ship_count = int(ship_count)
 
     def distance(self, other):
-        if not other in _dist_cache:
+        """Returns the distance to <other>. <other> must be one of Planet instance, list, tuple or Point."""
+        if not (self, other) in _dist_cache:
             if isinstance(other, Planet):
                 ox = other.position.x
                 oy = other.position.y
@@ -32,10 +33,19 @@ class Planet(object):
                 oy = other[1]
             dx = self.position.x - ox
             dy = self.position.y - oy
-            _dist_cache[other] = int(ceil(sqrt(dx ** 2 + dy ** 2)))
-        return _dist_cache[other]
+            distance = int(ceil(sqrt(dx ** 2 + dy ** 2)))
+            _dist_cache[(self, other)] = distance
+            _dist_cache[(other, self)] = distance
+        return _dist_cache[(self, other)]
 
     __sub__ = distance
+
+    def find_nearest_neighbor(self, owner=None, growth_rate=None):
+        """Find the nearest planet that satisfies the given conditions"""
+        candidates = self.universe.find_planets(owner=owner, growth_rate=growth_rate) - self
+        for planet in sorted(candidates, key=lambda p: p.distance(self)):
+            return planet
+        return None
 
     @property
     def attacking_fleets(self):
@@ -66,4 +76,20 @@ class Planet(object):
 
 
 class Planets(TypedSetBase):
+    """Represents a set of Planet objects.
+    All normal set methods are available. Additionaly you can | (or) Planet objects directly into it.
+    Some other convenience methods are available (see below).
+    """
     accepts = (Planet, )
+
+    @property
+    def ship_count(self):
+        """Returns the combined ship count of all Planet objects in this set"""
+        return sum(p.ship_count for p in self)
+
+    @property
+    def growth_rate(self):
+        """Returns the combined growth rate of all Planet objects in this set"""
+        return sum(p.growth_rate for p in self)
+
+    
