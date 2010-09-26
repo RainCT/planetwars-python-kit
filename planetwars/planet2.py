@@ -4,11 +4,16 @@ from copy import copy
 import player
 
 class Planet2(Planet):
-    def in_future(self, turns=1):
-        """Calculates state of planet in `turns' turns."""
+    def in_future(self, turns=None):
+        """Calculates state of planet in `turns' turns. If `turns' is None,
+        all fleets on the way to the planet are taken into account."""
         planet = copy(self)
 
         arriving_fleets = self.universe.find_fleets(destination=self)
+        
+        if turns is None:
+        	turns = reduce(lambda a, b: max(a, b.turns_remaining),
+        		arriving_fleets, 0)
 
         for i in range(1, turns+1):
             # account planet growth
@@ -46,4 +51,3 @@ class Planet2(Planet):
                     planet.ship_count=winner['ships'] - second['ships']
 
         return planet
-
